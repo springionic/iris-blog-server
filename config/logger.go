@@ -1,5 +1,6 @@
-// created by lilei at 2021/10/7
-package server
+// Package config
+//created by lilei at 2021/10/7
+package config
 
 import (
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
@@ -10,26 +11,14 @@ import (
 	"sync"
 )
 
-//type AccessLog struct {
-//	StartTime   time.Time
-//	EndTime     time.Time
-//	StatusCode  int
-//	LatencyTime time.Duration
-//	ClientIP    string
-//	Svc         string
-//	Uid         string
-//	ReqMethod   string
-//	ReqUri      string
-//	ReqBody     []byte
-//	RspBody     []byte
-//}
+var LoggerWriterList []*loggerWriter
 
 type loggerContent struct {
 	content string
 	level   log.Level
 }
 
-type AccessLogWriter struct {
+type loggerWriter struct {
 	logFileName     string
 	isWriteToStdout bool
 	logger          *log.Logger
@@ -37,7 +26,7 @@ type AccessLogWriter struct {
 	consumerChannel *chan loggerContent
 }
 
-func NewAccessLogWriter(level log.Level, logFileName string, isWriteToStout bool) *AccessLogWriter {
+func NewLoggerWriter(level log.Level, logFileName string, isWriteToStout bool) *loggerWriter {
 	// 日志目录
 	logDirPath := path.Join("logs", logFileName)
 	err := os.MkdirAll(logDirPath, 0644)
@@ -71,7 +60,7 @@ func NewAccessLogWriter(level log.Level, logFileName string, isWriteToStout bool
 	var wg sync.WaitGroup
 	wg.Add(1)
 	cc := make(chan loggerContent, 100)
-	w := AccessLogWriter{
+	w := loggerWriter{
 		logFileName, isWriteToStout, logger, &wg, &cc,
 	}
 	go func() {
@@ -80,29 +69,35 @@ func NewAccessLogWriter(level log.Level, logFileName string, isWriteToStout bool
 		}
 		wg.Done()
 	}()
+	LoggerWriterList = append(LoggerWriterList, &w)
 	return &w
 }
 
-func (w AccessLogWriter) Log(level log.Level, content string) {
+func (w loggerWriter) Stop() {
+	close(*w.consumerChannel)
+	w.waitGroup.Wait()
+}
+
+func (w loggerWriter) Log(level log.Level, content string) {
 	*w.consumerChannel <- loggerContent{content, level}
 }
 
-func (w AccessLogWriter) Info(content string) {
+func (w loggerWriter) Info(content string) {
 	w.Log(log.InfoLevel, content)
 }
 
-func (w AccessLogWriter) Warn(content string) {
+func (w loggerWriter) Warn(content string) {
 	w.Log(log.WarnLevel, content)
 }
 
-func (w AccessLogWriter) Error(content string) {
+func (w loggerWriter) Error(content string) {
 	w.Log(log.ErrorLevel, content)
 }
 
-func (w AccessLogWriter) Fatal(content string) {
+func (w loggerWriter) Fatal(content string) {
 	w.Log(log.FatalLevel, content)
 }
 
-func (w AccessLogWriter) Panic(content string) {
+func (w loggerWriter) Panic(content string) {
 	w.Log(log.PanicLevel, content)
 }
