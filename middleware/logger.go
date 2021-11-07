@@ -1,16 +1,16 @@
-// Package middlewares
+// Package middleware
 //created by lilei at 2021/10/31
-package middlewares
+package middleware
 
 import (
 	"fmt"
 	"github.com/kataras/iris/v12"
 	log "github.com/sirupsen/logrus"
-	"iris-blog-server/config"
+	"iris-blog-server/comp"
 	"time"
 )
 
-var logger = config.NewLoggerWriter(log.InfoLevel, "access.log", true)
+var logger = comp.NewLoggerWriter(log.InfoLevel, "access.log", true)
 
 type AccessLog struct {
 	StartTime   time.Time

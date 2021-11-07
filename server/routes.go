@@ -7,6 +7,6 @@ import (
 
 func regisRouter(app *iris.Application) {
 	//mvc.Configure(app.Party("/api"), func(m *mvc.Application) {
-	//	m.Party("/user").Handle(new(handlers.UserHandler))
+	//	m.Party("/user").Handle(new(handler.UserHandler))
 	//})
 }

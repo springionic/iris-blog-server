@@ -1,6 +1,6 @@
-// Package config
+// Package comp
 //created by lilei at 2021/10/7
-package config
+package comp
 
 import (
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
