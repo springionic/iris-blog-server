@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"github.com/kataras/iris/v12"
 	log "github.com/sirupsen/logrus"
-	"iris-blog-server/comp"
+	"iris-blog-server/util"
 	"time"
 )
 
-var logger = comp.NewLoggerWriter(log.InfoLevel, "access.log", true)
+var logger = util.NewLoggerWriter(log.InfoLevel, "access.log", true)
 
 type AccessLog struct {
 	StartTime   time.Time

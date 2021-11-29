@@ -35,16 +35,10 @@ type ArticleMutation struct {
 	op            Op
 	typ           string
 	id            *int
+	delete_time   *time.Time
 	create_time   *time.Time
 	update_time   *time.Time
-	title         *string
-	content       *string
 	clearedFields map[string]struct{}
-	user          *int
-	cleareduser   bool
-	tags          map[int]struct{}
-	removedtags   map[int]struct{}
-	clearedtags   bool
 	done          bool
 	oldValue      func(context.Context) (*Article, error)
 	predicates    []predicate.Article
@@ -129,6 +123,55 @@ func (m *ArticleMutation) ID() (id int, exists bool) {
 	return *m.id, true
 }
 
+// SetDeleteTime sets the "delete_time" field.
+func (m *ArticleMutation) SetDeleteTime(t time.Time) {
+	m.delete_time = &t
+}
+
+// DeleteTime returns the value of the "delete_time" field in the mutation.
+func (m *ArticleMutation) DeleteTime() (r time.Time, exists bool) {
+	v := m.delete_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeleteTime returns the old "delete_time" field's value of the Article entity.
+// If the Article object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ArticleMutation) OldDeleteTime(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldDeleteTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldDeleteTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeleteTime: %w", err)
+	}
+	return oldValue.DeleteTime, nil
+}
+
+// ClearDeleteTime clears the value of the "delete_time" field.
+func (m *ArticleMutation) ClearDeleteTime() {
+	m.delete_time = nil
+	m.clearedFields[article.FieldDeleteTime] = struct{}{}
+}
+
+// DeleteTimeCleared returns if the "delete_time" field was cleared in this mutation.
+func (m *ArticleMutation) DeleteTimeCleared() bool {
+	_, ok := m.clearedFields[article.FieldDeleteTime]
+	return ok
+}
+
+// ResetDeleteTime resets all changes to the "delete_time" field.
+func (m *ArticleMutation) ResetDeleteTime() {
+	m.delete_time = nil
+	delete(m.clearedFields, article.FieldDeleteTime)
+}
+
 // SetCreateTime sets the "create_time" field.
 func (m *ArticleMutation) SetCreateTime(t time.Time) {
 	m.create_time = &t
@@ -201,194 +244,6 @@ func (m *ArticleMutation) ResetUpdateTime() {
 	m.update_time = nil
 }
 
-// SetTitle sets the "title" field.
-func (m *ArticleMutation) SetTitle(s string) {
-	m.title = &s
-}
-
-// Title returns the value of the "title" field in the mutation.
-func (m *ArticleMutation) Title() (r string, exists bool) {
-	v := m.title
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldTitle returns the old "title" field's value of the Article entity.
-// If the Article object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ArticleMutation) OldTitle(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldTitle is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldTitle requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldTitle: %w", err)
-	}
-	return oldValue.Title, nil
-}
-
-// ResetTitle resets all changes to the "title" field.
-func (m *ArticleMutation) ResetTitle() {
-	m.title = nil
-}
-
-// SetContent sets the "content" field.
-func (m *ArticleMutation) SetContent(s string) {
-	m.content = &s
-}
-
-// Content returns the value of the "content" field in the mutation.
-func (m *ArticleMutation) Content() (r string, exists bool) {
-	v := m.content
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldContent returns the old "content" field's value of the Article entity.
-// If the Article object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ArticleMutation) OldContent(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldContent is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldContent requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldContent: %w", err)
-	}
-	return oldValue.Content, nil
-}
-
-// ResetContent resets all changes to the "content" field.
-func (m *ArticleMutation) ResetContent() {
-	m.content = nil
-}
-
-// SetUserID sets the "user_id" field.
-func (m *ArticleMutation) SetUserID(i int) {
-	m.user = &i
-}
-
-// UserID returns the value of the "user_id" field in the mutation.
-func (m *ArticleMutation) UserID() (r int, exists bool) {
-	v := m.user
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUserID returns the old "user_id" field's value of the Article entity.
-// If the Article object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ArticleMutation) OldUserID(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldUserID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldUserID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUserID: %w", err)
-	}
-	return oldValue.UserID, nil
-}
-
-// ResetUserID resets all changes to the "user_id" field.
-func (m *ArticleMutation) ResetUserID() {
-	m.user = nil
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (m *ArticleMutation) ClearUser() {
-	m.cleareduser = true
-}
-
-// UserCleared reports if the "user" edge to the User entity was cleared.
-func (m *ArticleMutation) UserCleared() bool {
-	return m.cleareduser
-}
-
-// UserIDs returns the "user" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// UserID instead. It exists only for internal usage by the builders.
-func (m *ArticleMutation) UserIDs() (ids []int) {
-	if id := m.user; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetUser resets all changes to the "user" edge.
-func (m *ArticleMutation) ResetUser() {
-	m.user = nil
-	m.cleareduser = false
-}
-
-// AddTagIDs adds the "tags" edge to the Tag entity by ids.
-func (m *ArticleMutation) AddTagIDs(ids ...int) {
-	if m.tags == nil {
-		m.tags = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.tags[ids[i]] = struct{}{}
-	}
-}
-
-// ClearTags clears the "tags" edge to the Tag entity.
-func (m *ArticleMutation) ClearTags() {
-	m.clearedtags = true
-}
-
-// TagsCleared reports if the "tags" edge to the Tag entity was cleared.
-func (m *ArticleMutation) TagsCleared() bool {
-	return m.clearedtags
-}
-
-// RemoveTagIDs removes the "tags" edge to the Tag entity by IDs.
-func (m *ArticleMutation) RemoveTagIDs(ids ...int) {
-	if m.removedtags == nil {
-		m.removedtags = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.tags, ids[i])
-		m.removedtags[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedTags returns the removed IDs of the "tags" edge to the Tag entity.
-func (m *ArticleMutation) RemovedTagsIDs() (ids []int) {
-	for id := range m.removedtags {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// TagsIDs returns the "tags" edge IDs in the mutation.
-func (m *ArticleMutation) TagsIDs() (ids []int) {
-	for id := range m.tags {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetTags resets all changes to the "tags" edge.
-func (m *ArticleMutation) ResetTags() {
-	m.tags = nil
-	m.clearedtags = false
-	m.removedtags = nil
-}
-
 // Where appends a list predicates to the ArticleMutation builder.
 func (m *ArticleMutation) Where(ps ...predicate.Article) {
 	m.predicates = append(m.predicates, ps...)
@@ -408,21 +263,15 @@ func (m *ArticleMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ArticleMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 3)
+	if m.delete_time != nil {
+		fields = append(fields, article.FieldDeleteTime)
+	}
 	if m.create_time != nil {
 		fields = append(fields, article.FieldCreateTime)
 	}
 	if m.update_time != nil {
 		fields = append(fields, article.FieldUpdateTime)
-	}
-	if m.title != nil {
-		fields = append(fields, article.FieldTitle)
-	}
-	if m.content != nil {
-		fields = append(fields, article.FieldContent)
-	}
-	if m.user != nil {
-		fields = append(fields, article.FieldUserID)
 	}
 	return fields
 }
@@ -432,16 +281,12 @@ func (m *ArticleMutation) Fields() []string {
 // schema.
 func (m *ArticleMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case article.FieldDeleteTime:
+		return m.DeleteTime()
 	case article.FieldCreateTime:
 		return m.CreateTime()
 	case article.FieldUpdateTime:
 		return m.UpdateTime()
-	case article.FieldTitle:
-		return m.Title()
-	case article.FieldContent:
-		return m.Content()
-	case article.FieldUserID:
-		return m.UserID()
 	}
 	return nil, false
 }
@@ -451,16 +296,12 @@ func (m *ArticleMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *ArticleMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case article.FieldDeleteTime:
+		return m.OldDeleteTime(ctx)
 	case article.FieldCreateTime:
 		return m.OldCreateTime(ctx)
 	case article.FieldUpdateTime:
 		return m.OldUpdateTime(ctx)
-	case article.FieldTitle:
-		return m.OldTitle(ctx)
-	case article.FieldContent:
-		return m.OldContent(ctx)
-	case article.FieldUserID:
-		return m.OldUserID(ctx)
 	}
 	return nil, fmt.Errorf("unknown Article field %s", name)
 }
@@ -470,6 +311,13 @@ func (m *ArticleMutation) OldField(ctx context.Context, name string) (ent.Value,
 // type.
 func (m *ArticleMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case article.FieldDeleteTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeleteTime(v)
+		return nil
 	case article.FieldCreateTime:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -484,27 +332,6 @@ func (m *ArticleMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetUpdateTime(v)
 		return nil
-	case article.FieldTitle:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetTitle(v)
-		return nil
-	case article.FieldContent:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetContent(v)
-		return nil
-	case article.FieldUserID:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUserID(v)
-		return nil
 	}
 	return fmt.Errorf("unknown Article field %s", name)
 }
@@ -512,16 +339,13 @@ func (m *ArticleMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *ArticleMutation) AddedFields() []string {
-	var fields []string
-	return fields
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *ArticleMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	}
 	return nil, false
 }
 
@@ -537,7 +361,11 @@ func (m *ArticleMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *ArticleMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(article.FieldDeleteTime) {
+		fields = append(fields, article.FieldDeleteTime)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -550,6 +378,11 @@ func (m *ArticleMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *ArticleMutation) ClearField(name string) error {
+	switch name {
+	case article.FieldDeleteTime:
+		m.ClearDeleteTime()
+		return nil
+	}
 	return fmt.Errorf("unknown Article nullable field %s", name)
 }
 
@@ -557,20 +390,14 @@ func (m *ArticleMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *ArticleMutation) ResetField(name string) error {
 	switch name {
+	case article.FieldDeleteTime:
+		m.ResetDeleteTime()
+		return nil
 	case article.FieldCreateTime:
 		m.ResetCreateTime()
 		return nil
 	case article.FieldUpdateTime:
 		m.ResetUpdateTime()
-		return nil
-	case article.FieldTitle:
-		m.ResetTitle()
-		return nil
-	case article.FieldContent:
-		m.ResetContent()
-		return nil
-	case article.FieldUserID:
-		m.ResetUserID()
 		return nil
 	}
 	return fmt.Errorf("unknown Article field %s", name)
@@ -578,122 +405,65 @@ func (m *ArticleMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ArticleMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.user != nil {
-		edges = append(edges, article.EdgeUser)
-	}
-	if m.tags != nil {
-		edges = append(edges, article.EdgeTags)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *ArticleMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case article.EdgeUser:
-		if id := m.user; id != nil {
-			return []ent.Value{*id}
-		}
-	case article.EdgeTags:
-		ids := make([]ent.Value, 0, len(m.tags))
-		for id := range m.tags {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ArticleMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.removedtags != nil {
-		edges = append(edges, article.EdgeTags)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *ArticleMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case article.EdgeTags:
-		ids := make([]ent.Value, 0, len(m.removedtags))
-		for id := range m.removedtags {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ArticleMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
-	if m.cleareduser {
-		edges = append(edges, article.EdgeUser)
-	}
-	if m.clearedtags {
-		edges = append(edges, article.EdgeTags)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *ArticleMutation) EdgeCleared(name string) bool {
-	switch name {
-	case article.EdgeUser:
-		return m.cleareduser
-	case article.EdgeTags:
-		return m.clearedtags
-	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *ArticleMutation) ClearEdge(name string) error {
-	switch name {
-	case article.EdgeUser:
-		m.ClearUser()
-		return nil
-	}
 	return fmt.Errorf("unknown Article unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *ArticleMutation) ResetEdge(name string) error {
-	switch name {
-	case article.EdgeUser:
-		m.ResetUser()
-		return nil
-	case article.EdgeTags:
-		m.ResetTags()
-		return nil
-	}
 	return fmt.Errorf("unknown Article edge %s", name)
 }
 
 // TagMutation represents an operation that mutates the Tag nodes in the graph.
 type TagMutation struct {
 	config
-	op              Op
-	typ             string
-	id              *int
-	create_time     *time.Time
-	update_time     *time.Time
-	name            *string
-	clearedFields   map[string]struct{}
-	articles        map[int]struct{}
-	removedarticles map[int]struct{}
-	clearedarticles bool
-	done            bool
-	oldValue        func(context.Context) (*Tag, error)
-	predicates      []predicate.Tag
+	op            Op
+	typ           string
+	id            *int
+	delete_time   *time.Time
+	create_time   *time.Time
+	update_time   *time.Time
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*Tag, error)
+	predicates    []predicate.Tag
 }
 
 var _ ent.Mutation = (*TagMutation)(nil)
@@ -775,6 +545,55 @@ func (m *TagMutation) ID() (id int, exists bool) {
 	return *m.id, true
 }
 
+// SetDeleteTime sets the "delete_time" field.
+func (m *TagMutation) SetDeleteTime(t time.Time) {
+	m.delete_time = &t
+}
+
+// DeleteTime returns the value of the "delete_time" field in the mutation.
+func (m *TagMutation) DeleteTime() (r time.Time, exists bool) {
+	v := m.delete_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeleteTime returns the old "delete_time" field's value of the Tag entity.
+// If the Tag object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TagMutation) OldDeleteTime(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldDeleteTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldDeleteTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeleteTime: %w", err)
+	}
+	return oldValue.DeleteTime, nil
+}
+
+// ClearDeleteTime clears the value of the "delete_time" field.
+func (m *TagMutation) ClearDeleteTime() {
+	m.delete_time = nil
+	m.clearedFields[tag.FieldDeleteTime] = struct{}{}
+}
+
+// DeleteTimeCleared returns if the "delete_time" field was cleared in this mutation.
+func (m *TagMutation) DeleteTimeCleared() bool {
+	_, ok := m.clearedFields[tag.FieldDeleteTime]
+	return ok
+}
+
+// ResetDeleteTime resets all changes to the "delete_time" field.
+func (m *TagMutation) ResetDeleteTime() {
+	m.delete_time = nil
+	delete(m.clearedFields, tag.FieldDeleteTime)
+}
+
 // SetCreateTime sets the "create_time" field.
 func (m *TagMutation) SetCreateTime(t time.Time) {
 	m.create_time = &t
@@ -847,96 +666,6 @@ func (m *TagMutation) ResetUpdateTime() {
 	m.update_time = nil
 }
 
-// SetName sets the "name" field.
-func (m *TagMutation) SetName(s string) {
-	m.name = &s
-}
-
-// Name returns the value of the "name" field in the mutation.
-func (m *TagMutation) Name() (r string, exists bool) {
-	v := m.name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldName returns the old "name" field's value of the Tag entity.
-// If the Tag object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TagMutation) OldName(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldName: %w", err)
-	}
-	return oldValue.Name, nil
-}
-
-// ResetName resets all changes to the "name" field.
-func (m *TagMutation) ResetName() {
-	m.name = nil
-}
-
-// AddArticleIDs adds the "articles" edge to the Article entity by ids.
-func (m *TagMutation) AddArticleIDs(ids ...int) {
-	if m.articles == nil {
-		m.articles = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.articles[ids[i]] = struct{}{}
-	}
-}
-
-// ClearArticles clears the "articles" edge to the Article entity.
-func (m *TagMutation) ClearArticles() {
-	m.clearedarticles = true
-}
-
-// ArticlesCleared reports if the "articles" edge to the Article entity was cleared.
-func (m *TagMutation) ArticlesCleared() bool {
-	return m.clearedarticles
-}
-
-// RemoveArticleIDs removes the "articles" edge to the Article entity by IDs.
-func (m *TagMutation) RemoveArticleIDs(ids ...int) {
-	if m.removedarticles == nil {
-		m.removedarticles = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.articles, ids[i])
-		m.removedarticles[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedArticles returns the removed IDs of the "articles" edge to the Article entity.
-func (m *TagMutation) RemovedArticlesIDs() (ids []int) {
-	for id := range m.removedarticles {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ArticlesIDs returns the "articles" edge IDs in the mutation.
-func (m *TagMutation) ArticlesIDs() (ids []int) {
-	for id := range m.articles {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetArticles resets all changes to the "articles" edge.
-func (m *TagMutation) ResetArticles() {
-	m.articles = nil
-	m.clearedarticles = false
-	m.removedarticles = nil
-}
-
 // Where appends a list predicates to the TagMutation builder.
 func (m *TagMutation) Where(ps ...predicate.Tag) {
 	m.predicates = append(m.predicates, ps...)
@@ -957,14 +686,14 @@ func (m *TagMutation) Type() string {
 // AddedFields().
 func (m *TagMutation) Fields() []string {
 	fields := make([]string, 0, 3)
+	if m.delete_time != nil {
+		fields = append(fields, tag.FieldDeleteTime)
+	}
 	if m.create_time != nil {
 		fields = append(fields, tag.FieldCreateTime)
 	}
 	if m.update_time != nil {
 		fields = append(fields, tag.FieldUpdateTime)
-	}
-	if m.name != nil {
-		fields = append(fields, tag.FieldName)
 	}
 	return fields
 }
@@ -974,12 +703,12 @@ func (m *TagMutation) Fields() []string {
 // schema.
 func (m *TagMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case tag.FieldDeleteTime:
+		return m.DeleteTime()
 	case tag.FieldCreateTime:
 		return m.CreateTime()
 	case tag.FieldUpdateTime:
 		return m.UpdateTime()
-	case tag.FieldName:
-		return m.Name()
 	}
 	return nil, false
 }
@@ -989,12 +718,12 @@ func (m *TagMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *TagMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case tag.FieldDeleteTime:
+		return m.OldDeleteTime(ctx)
 	case tag.FieldCreateTime:
 		return m.OldCreateTime(ctx)
 	case tag.FieldUpdateTime:
 		return m.OldUpdateTime(ctx)
-	case tag.FieldName:
-		return m.OldName(ctx)
 	}
 	return nil, fmt.Errorf("unknown Tag field %s", name)
 }
@@ -1004,6 +733,13 @@ func (m *TagMutation) OldField(ctx context.Context, name string) (ent.Value, err
 // type.
 func (m *TagMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case tag.FieldDeleteTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeleteTime(v)
+		return nil
 	case tag.FieldCreateTime:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -1017,13 +753,6 @@ func (m *TagMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetUpdateTime(v)
-		return nil
-	case tag.FieldName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetName(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Tag field %s", name)
@@ -1054,7 +783,11 @@ func (m *TagMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *TagMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(tag.FieldDeleteTime) {
+		fields = append(fields, tag.FieldDeleteTime)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -1067,6 +800,11 @@ func (m *TagMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *TagMutation) ClearField(name string) error {
+	switch name {
+	case tag.FieldDeleteTime:
+		m.ClearDeleteTime()
+		return nil
+	}
 	return fmt.Errorf("unknown Tag nullable field %s", name)
 }
 
@@ -1074,14 +812,14 @@ func (m *TagMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *TagMutation) ResetField(name string) error {
 	switch name {
+	case tag.FieldDeleteTime:
+		m.ResetDeleteTime()
+		return nil
 	case tag.FieldCreateTime:
 		m.ResetCreateTime()
 		return nil
 	case tag.FieldUpdateTime:
 		m.ResetUpdateTime()
-		return nil
-	case tag.FieldName:
-		m.ResetName()
 		return nil
 	}
 	return fmt.Errorf("unknown Tag field %s", name)
@@ -1089,85 +827,49 @@ func (m *TagMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TagMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.articles != nil {
-		edges = append(edges, tag.EdgeArticles)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *TagMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case tag.EdgeArticles:
-		ids := make([]ent.Value, 0, len(m.articles))
-		for id := range m.articles {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TagMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.removedarticles != nil {
-		edges = append(edges, tag.EdgeArticles)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *TagMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case tag.EdgeArticles:
-		ids := make([]ent.Value, 0, len(m.removedarticles))
-		for id := range m.removedarticles {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TagMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedarticles {
-		edges = append(edges, tag.EdgeArticles)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *TagMutation) EdgeCleared(name string) bool {
-	switch name {
-	case tag.EdgeArticles:
-		return m.clearedarticles
-	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *TagMutation) ClearEdge(name string) error {
-	switch name {
-	}
 	return fmt.Errorf("unknown Tag unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *TagMutation) ResetEdge(name string) error {
-	switch name {
-	case tag.EdgeArticles:
-		m.ResetArticles()
-		return nil
-	}
 	return fmt.Errorf("unknown Tag edge %s", name)
 }
 
@@ -1177,6 +879,7 @@ type UserMutation struct {
 	op              Op
 	typ             string
 	id              *int
+	delete_time     *time.Time
 	create_time     *time.Time
 	update_time     *time.Time
 	nick_name       *string
@@ -1268,6 +971,55 @@ func (m *UserMutation) ID() (id int, exists bool) {
 		return
 	}
 	return *m.id, true
+}
+
+// SetDeleteTime sets the "delete_time" field.
+func (m *UserMutation) SetDeleteTime(t time.Time) {
+	m.delete_time = &t
+}
+
+// DeleteTime returns the value of the "delete_time" field in the mutation.
+func (m *UserMutation) DeleteTime() (r time.Time, exists bool) {
+	v := m.delete_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeleteTime returns the old "delete_time" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldDeleteTime(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldDeleteTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldDeleteTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeleteTime: %w", err)
+	}
+	return oldValue.DeleteTime, nil
+}
+
+// ClearDeleteTime clears the value of the "delete_time" field.
+func (m *UserMutation) ClearDeleteTime() {
+	m.delete_time = nil
+	m.clearedFields[user.FieldDeleteTime] = struct{}{}
+}
+
+// DeleteTimeCleared returns if the "delete_time" field was cleared in this mutation.
+func (m *UserMutation) DeleteTimeCleared() bool {
+	_, ok := m.clearedFields[user.FieldDeleteTime]
+	return ok
+}
+
+// ResetDeleteTime resets all changes to the "delete_time" field.
+func (m *UserMutation) ResetDeleteTime() {
+	m.delete_time = nil
+	delete(m.clearedFields, user.FieldDeleteTime)
 }
 
 // SetCreateTime sets the "create_time" field.
@@ -1536,7 +1288,10 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
+	if m.delete_time != nil {
+		fields = append(fields, user.FieldDeleteTime)
+	}
 	if m.create_time != nil {
 		fields = append(fields, user.FieldCreateTime)
 	}
@@ -1560,6 +1315,8 @@ func (m *UserMutation) Fields() []string {
 // schema.
 func (m *UserMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case user.FieldDeleteTime:
+		return m.DeleteTime()
 	case user.FieldCreateTime:
 		return m.CreateTime()
 	case user.FieldUpdateTime:
@@ -1579,6 +1336,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case user.FieldDeleteTime:
+		return m.OldDeleteTime(ctx)
 	case user.FieldCreateTime:
 		return m.OldCreateTime(ctx)
 	case user.FieldUpdateTime:
@@ -1598,6 +1357,13 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 // type.
 func (m *UserMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case user.FieldDeleteTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeleteTime(v)
+		return nil
 	case user.FieldCreateTime:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -1663,6 +1429,9 @@ func (m *UserMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *UserMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(user.FieldDeleteTime) {
+		fields = append(fields, user.FieldDeleteTime)
+	}
 	if m.FieldCleared(user.FieldBirthday) {
 		fields = append(fields, user.FieldBirthday)
 	}
@@ -1680,6 +1449,9 @@ func (m *UserMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *UserMutation) ClearField(name string) error {
 	switch name {
+	case user.FieldDeleteTime:
+		m.ClearDeleteTime()
+		return nil
 	case user.FieldBirthday:
 		m.ClearBirthday()
 		return nil
@@ -1691,6 +1463,9 @@ func (m *UserMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *UserMutation) ResetField(name string) error {
 	switch name {
+	case user.FieldDeleteTime:
+		m.ResetDeleteTime()
+		return nil
 	case user.FieldCreateTime:
 		m.ResetCreateTime()
 		return nil

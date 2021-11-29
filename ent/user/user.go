@@ -12,6 +12,8 @@ const (
 	Label = "user"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldDeleteTime holds the string denoting the delete_time field in the database.
+	FieldDeleteTime = "delete_time"
 	// FieldCreateTime holds the string denoting the create_time field in the database.
 	FieldCreateTime = "create_time"
 	// FieldUpdateTime holds the string denoting the update_time field in the database.
@@ -32,12 +34,13 @@ const (
 	// It exists in this package in order to avoid circular dependency with the "article" package.
 	ArticlesInverseTable = "articles"
 	// ArticlesColumn is the table column denoting the articles relation/edge.
-	ArticlesColumn = "user_id"
+	ArticlesColumn = "user_articles"
 )
 
 // Columns holds all SQL columns for user fields.
 var Columns = []string{
 	FieldID,
+	FieldDeleteTime,
 	FieldCreateTime,
 	FieldUpdateTime,
 	FieldNickName,
@@ -56,6 +59,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultDeleteTime holds the default value on creation for the "delete_time" field.
+	DefaultDeleteTime func() time.Time
 	// DefaultCreateTime holds the default value on creation for the "create_time" field.
 	DefaultCreateTime func() time.Time
 	// DefaultUpdateTime holds the default value on creation for the "update_time" field.

@@ -21,6 +21,20 @@ type UserCreate struct {
 	hooks    []Hook
 }
 
+// SetDeleteTime sets the "delete_time" field.
+func (uc *UserCreate) SetDeleteTime(t time.Time) *UserCreate {
+	uc.mutation.SetDeleteTime(t)
+	return uc
+}
+
+// SetNillableDeleteTime sets the "delete_time" field if the given value is not nil.
+func (uc *UserCreate) SetNillableDeleteTime(t *time.Time) *UserCreate {
+	if t != nil {
+		uc.SetDeleteTime(*t)
+	}
+	return uc
+}
+
 // SetCreateTime sets the "create_time" field.
 func (uc *UserCreate) SetCreateTime(t time.Time) *UserCreate {
 	uc.mutation.SetCreateTime(t)
@@ -177,6 +191,10 @@ func (uc *UserCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (uc *UserCreate) defaults() {
+	if _, ok := uc.mutation.DeleteTime(); !ok {
+		v := user.DefaultDeleteTime()
+		uc.mutation.SetDeleteTime(v)
+	}
 	if _, ok := uc.mutation.CreateTime(); !ok {
 		v := user.DefaultCreateTime()
 		uc.mutation.SetCreateTime(v)
@@ -246,6 +264,14 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			},
 		}
 	)
+	if value, ok := uc.mutation.DeleteTime(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: user.FieldDeleteTime,
+		})
+		_node.DeleteTime = &value
+	}
 	if value, ok := uc.mutation.CreateTime(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,

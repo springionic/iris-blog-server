@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 // ID filters vertices based on their ID field.
@@ -93,6 +92,13 @@ func IDLTE(id int) predicate.Article {
 	})
 }
 
+// DeleteTime applies equality check predicate on the "delete_time" field. It's identical to DeleteTimeEQ.
+func DeleteTime(v time.Time) predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldDeleteTime), v))
+	})
+}
+
 // CreateTime applies equality check predicate on the "create_time" field. It's identical to CreateTimeEQ.
 func CreateTime(v time.Time) predicate.Article {
 	return predicate.Article(func(s *sql.Selector) {
@@ -107,24 +113,93 @@ func UpdateTime(v time.Time) predicate.Article {
 	})
 }
 
-// Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
-func Title(v string) predicate.Article {
+// DeleteTimeEQ applies the EQ predicate on the "delete_time" field.
+func DeleteTimeEQ(v time.Time) predicate.Article {
 	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldTitle), v))
+		s.Where(sql.EQ(s.C(FieldDeleteTime), v))
 	})
 }
 
-// Content applies equality check predicate on the "content" field. It's identical to ContentEQ.
-func Content(v string) predicate.Article {
+// DeleteTimeNEQ applies the NEQ predicate on the "delete_time" field.
+func DeleteTimeNEQ(v time.Time) predicate.Article {
 	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldContent), v))
+		s.Where(sql.NEQ(s.C(FieldDeleteTime), v))
 	})
 }
 
-// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
-func UserID(v int) predicate.Article {
+// DeleteTimeIn applies the In predicate on the "delete_time" field.
+func DeleteTimeIn(vs ...time.Time) predicate.Article {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
 	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldUserID), v))
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.In(s.C(FieldDeleteTime), v...))
+	})
+}
+
+// DeleteTimeNotIn applies the NotIn predicate on the "delete_time" field.
+func DeleteTimeNotIn(vs ...time.Time) predicate.Article {
+	v := make([]interface{}, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Article(func(s *sql.Selector) {
+		// if not arguments were provided, append the FALSE constants,
+		// since we can't apply "IN ()". This will make this predicate falsy.
+		if len(v) == 0 {
+			s.Where(sql.False())
+			return
+		}
+		s.Where(sql.NotIn(s.C(FieldDeleteTime), v...))
+	})
+}
+
+// DeleteTimeGT applies the GT predicate on the "delete_time" field.
+func DeleteTimeGT(v time.Time) predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldDeleteTime), v))
+	})
+}
+
+// DeleteTimeGTE applies the GTE predicate on the "delete_time" field.
+func DeleteTimeGTE(v time.Time) predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldDeleteTime), v))
+	})
+}
+
+// DeleteTimeLT applies the LT predicate on the "delete_time" field.
+func DeleteTimeLT(v time.Time) predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldDeleteTime), v))
+	})
+}
+
+// DeleteTimeLTE applies the LTE predicate on the "delete_time" field.
+func DeleteTimeLTE(v time.Time) predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldDeleteTime), v))
+	})
+}
+
+// DeleteTimeIsNil applies the IsNil predicate on the "delete_time" field.
+func DeleteTimeIsNil() predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		s.Where(sql.IsNull(s.C(FieldDeleteTime)))
+	})
+}
+
+// DeleteTimeNotNil applies the NotNil predicate on the "delete_time" field.
+func DeleteTimeNotNil() predicate.Article {
+	return predicate.Article(func(s *sql.Selector) {
+		s.Where(sql.NotNull(s.C(FieldDeleteTime)))
 	})
 }
 
@@ -277,332 +352,6 @@ func UpdateTimeLT(v time.Time) predicate.Article {
 func UpdateTimeLTE(v time.Time) predicate.Article {
 	return predicate.Article(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldUpdateTime), v))
-	})
-}
-
-// TitleEQ applies the EQ predicate on the "title" field.
-func TitleEQ(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldTitle), v))
-	})
-}
-
-// TitleNEQ applies the NEQ predicate on the "title" field.
-func TitleNEQ(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldTitle), v))
-	})
-}
-
-// TitleIn applies the In predicate on the "title" field.
-func TitleIn(vs ...string) predicate.Article {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Article(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.In(s.C(FieldTitle), v...))
-	})
-}
-
-// TitleNotIn applies the NotIn predicate on the "title" field.
-func TitleNotIn(vs ...string) predicate.Article {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Article(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.NotIn(s.C(FieldTitle), v...))
-	})
-}
-
-// TitleGT applies the GT predicate on the "title" field.
-func TitleGT(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldTitle), v))
-	})
-}
-
-// TitleGTE applies the GTE predicate on the "title" field.
-func TitleGTE(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldTitle), v))
-	})
-}
-
-// TitleLT applies the LT predicate on the "title" field.
-func TitleLT(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldTitle), v))
-	})
-}
-
-// TitleLTE applies the LTE predicate on the "title" field.
-func TitleLTE(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldTitle), v))
-	})
-}
-
-// TitleContains applies the Contains predicate on the "title" field.
-func TitleContains(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldTitle), v))
-	})
-}
-
-// TitleHasPrefix applies the HasPrefix predicate on the "title" field.
-func TitleHasPrefix(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldTitle), v))
-	})
-}
-
-// TitleHasSuffix applies the HasSuffix predicate on the "title" field.
-func TitleHasSuffix(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldTitle), v))
-	})
-}
-
-// TitleEqualFold applies the EqualFold predicate on the "title" field.
-func TitleEqualFold(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldTitle), v))
-	})
-}
-
-// TitleContainsFold applies the ContainsFold predicate on the "title" field.
-func TitleContainsFold(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldTitle), v))
-	})
-}
-
-// ContentEQ applies the EQ predicate on the "content" field.
-func ContentEQ(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldContent), v))
-	})
-}
-
-// ContentNEQ applies the NEQ predicate on the "content" field.
-func ContentNEQ(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldContent), v))
-	})
-}
-
-// ContentIn applies the In predicate on the "content" field.
-func ContentIn(vs ...string) predicate.Article {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Article(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.In(s.C(FieldContent), v...))
-	})
-}
-
-// ContentNotIn applies the NotIn predicate on the "content" field.
-func ContentNotIn(vs ...string) predicate.Article {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Article(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.NotIn(s.C(FieldContent), v...))
-	})
-}
-
-// ContentGT applies the GT predicate on the "content" field.
-func ContentGT(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldContent), v))
-	})
-}
-
-// ContentGTE applies the GTE predicate on the "content" field.
-func ContentGTE(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldContent), v))
-	})
-}
-
-// ContentLT applies the LT predicate on the "content" field.
-func ContentLT(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldContent), v))
-	})
-}
-
-// ContentLTE applies the LTE predicate on the "content" field.
-func ContentLTE(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldContent), v))
-	})
-}
-
-// ContentContains applies the Contains predicate on the "content" field.
-func ContentContains(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldContent), v))
-	})
-}
-
-// ContentHasPrefix applies the HasPrefix predicate on the "content" field.
-func ContentHasPrefix(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldContent), v))
-	})
-}
-
-// ContentHasSuffix applies the HasSuffix predicate on the "content" field.
-func ContentHasSuffix(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldContent), v))
-	})
-}
-
-// ContentEqualFold applies the EqualFold predicate on the "content" field.
-func ContentEqualFold(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldContent), v))
-	})
-}
-
-// ContentContainsFold applies the ContainsFold predicate on the "content" field.
-func ContentContainsFold(v string) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldContent), v))
-	})
-}
-
-// UserIDEQ applies the EQ predicate on the "user_id" field.
-func UserIDEQ(v int) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldUserID), v))
-	})
-}
-
-// UserIDNEQ applies the NEQ predicate on the "user_id" field.
-func UserIDNEQ(v int) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldUserID), v))
-	})
-}
-
-// UserIDIn applies the In predicate on the "user_id" field.
-func UserIDIn(vs ...int) predicate.Article {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Article(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.In(s.C(FieldUserID), v...))
-	})
-}
-
-// UserIDNotIn applies the NotIn predicate on the "user_id" field.
-func UserIDNotIn(vs ...int) predicate.Article {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Article(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.NotIn(s.C(FieldUserID), v...))
-	})
-}
-
-// HasUser applies the HasEdge predicate on the "user" edge.
-func HasUser() predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(UserTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
-func HasUserWith(preds ...predicate.User) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(UserInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
-		)
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasTags applies the HasEdge predicate on the "tags" edge.
-func HasTags() predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(TagsTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, TagsTable, TagsPrimaryKey...),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasTagsWith applies the HasEdge predicate on the "tags" edge with a given conditions (other predicates).
-func HasTagsWith(preds ...predicate.Tag) predicate.Article {
-	return predicate.Article(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(TagsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, TagsTable, TagsPrimaryKey...),
-		)
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
 	})
 }
 

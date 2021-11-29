@@ -5,7 +5,6 @@ package ent
 import (
 	"fmt"
 	"iris-blog-server/ent/article"
-	"iris-blog-server/ent/user"
 	"strings"
 	"time"
 
@@ -17,56 +16,14 @@ type Article struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
+	// DeleteTime holds the value of the "delete_time" field.
+	// 删除时间
+	DeleteTime *time.Time `json:"-"`
 	// CreateTime holds the value of the "create_time" field.
 	CreateTime time.Time `json:"create_time,omitempty"`
 	// UpdateTime holds the value of the "update_time" field.
-	UpdateTime time.Time `json:"update_time,omitempty"`
-	// Title holds the value of the "title" field.
-	// 文章标题
-	Title string `json:"title,omitempty"`
-	// Content holds the value of the "content" field.
-	// 文章内容
-	Content string `json:"content,omitempty"`
-	// UserID holds the value of the "user_id" field.
-	// 文章的用户 id
-	UserID int `json:"user_id,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the ArticleQuery when eager-loading is set.
-	Edges ArticleEdges `json:"edges"`
-}
-
-// ArticleEdges holds the relations/edges for other nodes in the graph.
-type ArticleEdges struct {
-	// User holds the value of the user edge.
-	User *User `json:"user,omitempty"`
-	// Tags holds the value of the tags edge.
-	Tags []*Tag `json:"tags,omitempty"`
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
-}
-
-// UserOrErr returns the User value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e ArticleEdges) UserOrErr() (*User, error) {
-	if e.loadedTypes[0] {
-		if e.User == nil {
-			// The edge user was loaded in eager-loading,
-			// but was not found.
-			return nil, &NotFoundError{label: user.Label}
-		}
-		return e.User, nil
-	}
-	return nil, &NotLoadedError{edge: "user"}
-}
-
-// TagsOrErr returns the Tags value or an error if the edge
-// was not loaded in eager-loading.
-func (e ArticleEdges) TagsOrErr() ([]*Tag, error) {
-	if e.loadedTypes[1] {
-		return e.Tags, nil
-	}
-	return nil, &NotLoadedError{edge: "tags"}
+	UpdateTime    time.Time `json:"update_time,omitempty"`
+	user_articles *int
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -74,12 +31,12 @@ func (*Article) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case article.FieldID, article.FieldUserID:
+		case article.FieldID:
 			values[i] = new(sql.NullInt64)
-		case article.FieldTitle, article.FieldContent:
-			values[i] = new(sql.NullString)
-		case article.FieldCreateTime, article.FieldUpdateTime:
+		case article.FieldDeleteTime, article.FieldCreateTime, article.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
+		case article.ForeignKeys[0]: // user_articles
+			values[i] = new(sql.NullInt64)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Article", columns[i])
 		}
@@ -101,6 +58,13 @@ func (a *Article) assignValues(columns []string, values []interface{}) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			a.ID = int(value.Int64)
+		case article.FieldDeleteTime:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field delete_time", values[i])
+			} else if value.Valid {
+				a.DeleteTime = new(time.Time)
+				*a.DeleteTime = value.Time
+			}
 		case article.FieldCreateTime:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field create_time", values[i])
@@ -113,37 +77,16 @@ func (a *Article) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				a.UpdateTime = value.Time
 			}
-		case article.FieldTitle:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field title", values[i])
-			} else if value.Valid {
-				a.Title = value.String
-			}
-		case article.FieldContent:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field content", values[i])
-			} else if value.Valid {
-				a.Content = value.String
-			}
-		case article.FieldUserID:
+		case article.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field user_id", values[i])
+				return fmt.Errorf("unexpected type %T for edge-field user_articles", value)
 			} else if value.Valid {
-				a.UserID = int(value.Int64)
+				a.user_articles = new(int)
+				*a.user_articles = int(value.Int64)
 			}
 		}
 	}
 	return nil
-}
-
-// QueryUser queries the "user" edge of the Article entity.
-func (a *Article) QueryUser() *UserQuery {
-	return (&ArticleClient{config: a.config}).QueryUser(a)
-}
-
-// QueryTags queries the "tags" edge of the Article entity.
-func (a *Article) QueryTags() *TagQuery {
-	return (&ArticleClient{config: a.config}).QueryTags(a)
 }
 
 // Update returns a builder for updating this Article.
@@ -169,16 +112,14 @@ func (a *Article) String() string {
 	var builder strings.Builder
 	builder.WriteString("Article(")
 	builder.WriteString(fmt.Sprintf("id=%v", a.ID))
+	if v := a.DeleteTime; v != nil {
+		builder.WriteString(", delete_time=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", create_time=")
 	builder.WriteString(a.CreateTime.Format(time.ANSIC))
 	builder.WriteString(", update_time=")
 	builder.WriteString(a.UpdateTime.Format(time.ANSIC))
-	builder.WriteString(", title=")
-	builder.WriteString(a.Title)
-	builder.WriteString(", content=")
-	builder.WriteString(a.Content)
-	builder.WriteString(", user_id=")
-	builder.WriteString(fmt.Sprintf("%v", a.UserID))
 	builder.WriteByte(')')
 	return builder.String()
 }

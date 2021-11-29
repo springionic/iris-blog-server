@@ -291,12 +291,12 @@ func (uq *UserQuery) WithArticles(opts ...func(*ArticleQuery)) *UserQuery {
 // Example:
 //
 //	var v []struct {
-//		CreateTime time.Time `json:"create_time,omitempty"`
+//		DeleteTime time.Time `json:"-"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.User.Query().
-//		GroupBy(user.FieldCreateTime).
+//		GroupBy(user.FieldDeleteTime).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 //
@@ -318,11 +318,11 @@ func (uq *UserQuery) GroupBy(field string, fields ...string) *UserGroupBy {
 // Example:
 //
 //	var v []struct {
-//		CreateTime time.Time `json:"create_time,omitempty"`
+//		DeleteTime time.Time `json:"-"`
 //	}
 //
 //	client.User.Query().
-//		Select(user.FieldCreateTime).
+//		Select(user.FieldDeleteTime).
 //		Scan(ctx, &v)
 //
 func (uq *UserQuery) Select(fields ...string) *UserSelect {
@@ -382,6 +382,7 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 			nodeids[nodes[i].ID] = nodes[i]
 			nodes[i].Edges.Articles = []*Article{}
 		}
+		query.withFKs = true
 		query.Where(predicate.Article(func(s *sql.Selector) {
 			s.Where(sql.InValues(user.ArticlesColumn, fks...))
 		}))
@@ -390,10 +391,13 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 			return nil, err
 		}
 		for _, n := range neighbors {
-			fk := n.UserID
-			node, ok := nodeids[fk]
+			fk := n.user_articles
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "user_articles" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
 			if !ok {
-				return nil, fmt.Errorf(`unexpected foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+				return nil, fmt.Errorf(`unexpected foreign-key "user_articles" returned %v for node %v`, *fk, n.ID)
 			}
 			node.Edges.Articles = append(node.Edges.Articles, n)
 		}

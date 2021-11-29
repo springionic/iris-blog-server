@@ -221,38 +221,6 @@ func (c *ArticleClient) GetX(ctx context.Context, id int) *Article {
 	return obj
 }
 
-// QueryUser queries the user edge of a Article.
-func (c *ArticleClient) QueryUser(a *Article) *UserQuery {
-	query := &UserQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := a.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(article.Table, article.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, article.UserTable, article.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryTags queries the tags edge of a Article.
-func (c *ArticleClient) QueryTags(a *Article) *TagQuery {
-	query := &TagQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := a.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(article.Table, article.FieldID, id),
-			sqlgraph.To(tag.Table, tag.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, article.TagsTable, article.TagsPrimaryKey...),
-		)
-		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // Hooks returns the client hooks.
 func (c *ArticleClient) Hooks() []Hook {
 	return c.hooks.Article
@@ -341,22 +309,6 @@ func (c *TagClient) GetX(ctx context.Context, id int) *Tag {
 		panic(err)
 	}
 	return obj
-}
-
-// QueryArticles queries the articles edge of a Tag.
-func (c *TagClient) QueryArticles(t *Tag) *ArticleQuery {
-	query := &ArticleQuery{config: c.config}
-	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
-		id := t.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(tag.Table, tag.FieldID, id),
-			sqlgraph.To(article.Table, article.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, tag.ArticlesTable, tag.ArticlesPrimaryKey...),
-		)
-		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
 }
 
 // Hooks returns the client hooks.

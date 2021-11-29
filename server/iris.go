@@ -6,8 +6,8 @@ import (
 	"context"
 	"github.com/kataras/iris/v12"
 	log "github.com/sirupsen/logrus"
-	"iris-blog-server/comp"
-	"iris-blog-server/middleware"
+	middleware2 "iris-blog-server/server/middleware"
+	"iris-blog-server/util"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,7 +18,7 @@ import (
 func Start() {
 	log.Println("start server...")
 	app := iris.New()
-	app.Use(middleware.LoggerHandler)
+	app.Use(middleware2.LoggerHandler, middleware2.ErrorHandler)
 	regisRouter(app)
 	err := app.Run(iris.Addr(":8080"), iris.WithConfiguration(
 		iris.Configuration{
@@ -56,8 +56,8 @@ func Start() {
 		log.Fatal("Server Shutdown:", err)
 	}
 	// 终止所有日志记录器
-	for i := 0; i < len(comp.LoggerWriterList); i++ {
-		comp.LoggerWriterList[i].Stop()
+	for i := 0; i < len(util.LoggerWriterList); i++ {
+		util.LoggerWriterList[i].Stop()
 	}
 	log.Println("Server exited.")
 }

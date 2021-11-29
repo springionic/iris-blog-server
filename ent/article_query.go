@@ -4,13 +4,10 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"errors"
 	"fmt"
 	"iris-blog-server/ent/article"
 	"iris-blog-server/ent/predicate"
-	"iris-blog-server/ent/tag"
-	"iris-blog-server/ent/user"
 	"math"
 
 	"entgo.io/ent/dialect/sql"
@@ -27,9 +24,7 @@ type ArticleQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Article
-	// eager-loading edges.
-	withUser *UserQuery
-	withTags *TagQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -64,50 +59,6 @@ func (aq *ArticleQuery) Unique(unique bool) *ArticleQuery {
 func (aq *ArticleQuery) Order(o ...OrderFunc) *ArticleQuery {
 	aq.order = append(aq.order, o...)
 	return aq
-}
-
-// QueryUser chains the current query on the "user" edge.
-func (aq *ArticleQuery) QueryUser() *UserQuery {
-	query := &UserQuery{config: aq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := aq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := aq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(article.Table, article.FieldID, selector),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, article.UserTable, article.UserColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryTags chains the current query on the "tags" edge.
-func (aq *ArticleQuery) QueryTags() *TagQuery {
-	query := &TagQuery{config: aq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := aq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := aq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(article.Table, article.FieldID, selector),
-			sqlgraph.To(tag.Table, tag.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, article.TagsTable, article.TagsPrimaryKey...),
-		)
-		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
 }
 
 // First returns the first Article entity from the query.
@@ -291,34 +242,10 @@ func (aq *ArticleQuery) Clone() *ArticleQuery {
 		offset:     aq.offset,
 		order:      append([]OrderFunc{}, aq.order...),
 		predicates: append([]predicate.Article{}, aq.predicates...),
-		withUser:   aq.withUser.Clone(),
-		withTags:   aq.withTags.Clone(),
 		// clone intermediate query.
 		sql:  aq.sql.Clone(),
 		path: aq.path,
 	}
-}
-
-// WithUser tells the query-builder to eager-load the nodes that are connected to
-// the "user" edge. The optional arguments are used to configure the query builder of the edge.
-func (aq *ArticleQuery) WithUser(opts ...func(*UserQuery)) *ArticleQuery {
-	query := &UserQuery{config: aq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	aq.withUser = query
-	return aq
-}
-
-// WithTags tells the query-builder to eager-load the nodes that are connected to
-// the "tags" edge. The optional arguments are used to configure the query builder of the edge.
-func (aq *ArticleQuery) WithTags(opts ...func(*TagQuery)) *ArticleQuery {
-	query := &TagQuery{config: aq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	aq.withTags = query
-	return aq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -327,12 +254,12 @@ func (aq *ArticleQuery) WithTags(opts ...func(*TagQuery)) *ArticleQuery {
 // Example:
 //
 //	var v []struct {
-//		CreateTime time.Time `json:"create_time,omitempty"`
+//		DeleteTime time.Time `json:"-"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Article.Query().
-//		GroupBy(article.FieldCreateTime).
+//		GroupBy(article.FieldDeleteTime).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 //
@@ -354,11 +281,11 @@ func (aq *ArticleQuery) GroupBy(field string, fields ...string) *ArticleGroupBy 
 // Example:
 //
 //	var v []struct {
-//		CreateTime time.Time `json:"create_time,omitempty"`
+//		DeleteTime time.Time `json:"-"`
 //	}
 //
 //	client.Article.Query().
-//		Select(article.FieldCreateTime).
+//		Select(article.FieldDeleteTime).
 //		Scan(ctx, &v)
 //
 func (aq *ArticleQuery) Select(fields ...string) *ArticleSelect {
@@ -384,13 +311,13 @@ func (aq *ArticleQuery) prepareQuery(ctx context.Context) error {
 
 func (aq *ArticleQuery) sqlAll(ctx context.Context) ([]*Article, error) {
 	var (
-		nodes       = []*Article{}
-		_spec       = aq.querySpec()
-		loadedTypes = [2]bool{
-			aq.withUser != nil,
-			aq.withTags != nil,
-		}
+		nodes   = []*Article{}
+		withFKs = aq.withFKs
+		_spec   = aq.querySpec()
 	)
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, article.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
 		node := &Article{config: aq.config}
 		nodes = append(nodes, node)
@@ -401,7 +328,6 @@ func (aq *ArticleQuery) sqlAll(ctx context.Context) ([]*Article, error) {
 			return fmt.Errorf("ent: Assign called without calling ScanValues")
 		}
 		node := nodes[len(nodes)-1]
-		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	if err := sqlgraph.QueryNodes(ctx, aq.driver, _spec); err != nil {
@@ -410,98 +336,6 @@ func (aq *ArticleQuery) sqlAll(ctx context.Context) ([]*Article, error) {
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-
-	if query := aq.withUser; query != nil {
-		ids := make([]int, 0, len(nodes))
-		nodeids := make(map[int][]*Article)
-		for i := range nodes {
-			fk := nodes[i].UserID
-			if _, ok := nodeids[fk]; !ok {
-				ids = append(ids, fk)
-			}
-			nodeids[fk] = append(nodeids[fk], nodes[i])
-		}
-		query.Where(user.IDIn(ids...))
-		neighbors, err := query.All(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, n := range neighbors {
-			nodes, ok := nodeids[n.ID]
-			if !ok {
-				return nil, fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
-			}
-			for i := range nodes {
-				nodes[i].Edges.User = n
-			}
-		}
-	}
-
-	if query := aq.withTags; query != nil {
-		fks := make([]driver.Value, 0, len(nodes))
-		ids := make(map[int]*Article, len(nodes))
-		for _, node := range nodes {
-			ids[node.ID] = node
-			fks = append(fks, node.ID)
-			node.Edges.Tags = []*Tag{}
-		}
-		var (
-			edgeids []int
-			edges   = make(map[int][]*Article)
-		)
-		_spec := &sqlgraph.EdgeQuerySpec{
-			Edge: &sqlgraph.EdgeSpec{
-				Inverse: false,
-				Table:   article.TagsTable,
-				Columns: article.TagsPrimaryKey,
-			},
-			Predicate: func(s *sql.Selector) {
-				s.Where(sql.InValues(article.TagsPrimaryKey[0], fks...))
-			},
-			ScanValues: func() [2]interface{} {
-				return [2]interface{}{new(sql.NullInt64), new(sql.NullInt64)}
-			},
-			Assign: func(out, in interface{}) error {
-				eout, ok := out.(*sql.NullInt64)
-				if !ok || eout == nil {
-					return fmt.Errorf("unexpected id value for edge-out")
-				}
-				ein, ok := in.(*sql.NullInt64)
-				if !ok || ein == nil {
-					return fmt.Errorf("unexpected id value for edge-in")
-				}
-				outValue := int(eout.Int64)
-				inValue := int(ein.Int64)
-				node, ok := ids[outValue]
-				if !ok {
-					return fmt.Errorf("unexpected node id in edges: %v", outValue)
-				}
-				if _, ok := edges[inValue]; !ok {
-					edgeids = append(edgeids, inValue)
-				}
-				edges[inValue] = append(edges[inValue], node)
-				return nil
-			},
-		}
-		if err := sqlgraph.QueryEdges(ctx, aq.driver, _spec); err != nil {
-			return nil, fmt.Errorf(`query edges "tags": %w`, err)
-		}
-		query.Where(tag.IDIn(edgeids...))
-		neighbors, err := query.All(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, n := range neighbors {
-			nodes, ok := edges[n.ID]
-			if !ok {
-				return nil, fmt.Errorf(`unexpected "tags" node returned %v`, n.ID)
-			}
-			for i := range nodes {
-				nodes[i].Edges.Tags = append(nodes[i].Edges.Tags, n)
-			}
-		}
-	}
-
 	return nodes, nil
 }
 

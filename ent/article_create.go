@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"iris-blog-server/ent/article"
-	"iris-blog-server/ent/tag"
-	"iris-blog-server/ent/user"
 	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -20,6 +18,20 @@ type ArticleCreate struct {
 	config
 	mutation *ArticleMutation
 	hooks    []Hook
+}
+
+// SetDeleteTime sets the "delete_time" field.
+func (ac *ArticleCreate) SetDeleteTime(t time.Time) *ArticleCreate {
+	ac.mutation.SetDeleteTime(t)
+	return ac
+}
+
+// SetNillableDeleteTime sets the "delete_time" field if the given value is not nil.
+func (ac *ArticleCreate) SetNillableDeleteTime(t *time.Time) *ArticleCreate {
+	if t != nil {
+		ac.SetDeleteTime(*t)
+	}
+	return ac
 }
 
 // SetCreateTime sets the "create_time" field.
@@ -48,60 +60,6 @@ func (ac *ArticleCreate) SetNillableUpdateTime(t *time.Time) *ArticleCreate {
 		ac.SetUpdateTime(*t)
 	}
 	return ac
-}
-
-// SetTitle sets the "title" field.
-func (ac *ArticleCreate) SetTitle(s string) *ArticleCreate {
-	ac.mutation.SetTitle(s)
-	return ac
-}
-
-// SetNillableTitle sets the "title" field if the given value is not nil.
-func (ac *ArticleCreate) SetNillableTitle(s *string) *ArticleCreate {
-	if s != nil {
-		ac.SetTitle(*s)
-	}
-	return ac
-}
-
-// SetContent sets the "content" field.
-func (ac *ArticleCreate) SetContent(s string) *ArticleCreate {
-	ac.mutation.SetContent(s)
-	return ac
-}
-
-// SetNillableContent sets the "content" field if the given value is not nil.
-func (ac *ArticleCreate) SetNillableContent(s *string) *ArticleCreate {
-	if s != nil {
-		ac.SetContent(*s)
-	}
-	return ac
-}
-
-// SetUserID sets the "user_id" field.
-func (ac *ArticleCreate) SetUserID(i int) *ArticleCreate {
-	ac.mutation.SetUserID(i)
-	return ac
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (ac *ArticleCreate) SetUser(u *User) *ArticleCreate {
-	return ac.SetUserID(u.ID)
-}
-
-// AddTagIDs adds the "tags" edge to the Tag entity by IDs.
-func (ac *ArticleCreate) AddTagIDs(ids ...int) *ArticleCreate {
-	ac.mutation.AddTagIDs(ids...)
-	return ac
-}
-
-// AddTags adds the "tags" edges to the Tag entity.
-func (ac *ArticleCreate) AddTags(t ...*Tag) *ArticleCreate {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
-	}
-	return ac.AddTagIDs(ids...)
 }
 
 // Mutation returns the ArticleMutation object of the builder.
@@ -175,6 +133,10 @@ func (ac *ArticleCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (ac *ArticleCreate) defaults() {
+	if _, ok := ac.mutation.DeleteTime(); !ok {
+		v := article.DefaultDeleteTime()
+		ac.mutation.SetDeleteTime(v)
+	}
 	if _, ok := ac.mutation.CreateTime(); !ok {
 		v := article.DefaultCreateTime()
 		ac.mutation.SetCreateTime(v)
@@ -182,14 +144,6 @@ func (ac *ArticleCreate) defaults() {
 	if _, ok := ac.mutation.UpdateTime(); !ok {
 		v := article.DefaultUpdateTime()
 		ac.mutation.SetUpdateTime(v)
-	}
-	if _, ok := ac.mutation.Title(); !ok {
-		v := article.DefaultTitle
-		ac.mutation.SetTitle(v)
-	}
-	if _, ok := ac.mutation.Content(); !ok {
-		v := article.DefaultContent
-		ac.mutation.SetContent(v)
 	}
 }
 
@@ -200,23 +154,6 @@ func (ac *ArticleCreate) check() error {
 	}
 	if _, ok := ac.mutation.UpdateTime(); !ok {
 		return &ValidationError{Name: "update_time", err: errors.New(`ent: missing required field "update_time"`)}
-	}
-	if _, ok := ac.mutation.Title(); !ok {
-		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "title"`)}
-	}
-	if v, ok := ac.mutation.Title(); ok {
-		if err := article.TitleValidator(v); err != nil {
-			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "title": %w`, err)}
-		}
-	}
-	if _, ok := ac.mutation.Content(); !ok {
-		return &ValidationError{Name: "content", err: errors.New(`ent: missing required field "content"`)}
-	}
-	if _, ok := ac.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "user_id"`)}
-	}
-	if _, ok := ac.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user", err: errors.New("ent: missing required edge \"user\"")}
 	}
 	return nil
 }
@@ -245,6 +182,14 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 			},
 		}
 	)
+	if value, ok := ac.mutation.DeleteTime(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: article.FieldDeleteTime,
+		})
+		_node.DeleteTime = &value
+	}
 	if value, ok := ac.mutation.CreateTime(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
@@ -260,61 +205,6 @@ func (ac *ArticleCreate) createSpec() (*Article, *sqlgraph.CreateSpec) {
 			Column: article.FieldUpdateTime,
 		})
 		_node.UpdateTime = value
-	}
-	if value, ok := ac.mutation.Title(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: article.FieldTitle,
-		})
-		_node.Title = value
-	}
-	if value, ok := ac.mutation.Content(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: article.FieldContent,
-		})
-		_node.Content = value
-	}
-	if nodes := ac.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   article.UserTable,
-			Columns: []string{article.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.UserID = nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := ac.mutation.TagsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.TagsTable,
-			Columns: article.TagsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

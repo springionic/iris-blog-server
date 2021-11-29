@@ -16,34 +16,13 @@ type Tag struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
+	// DeleteTime holds the value of the "delete_time" field.
+	// 删除时间
+	DeleteTime *time.Time `json:"-"`
 	// CreateTime holds the value of the "create_time" field.
 	CreateTime time.Time `json:"create_time,omitempty"`
 	// UpdateTime holds the value of the "update_time" field.
 	UpdateTime time.Time `json:"update_time,omitempty"`
-	// Name holds the value of the "name" field.
-	// 标签名称
-	Name string `json:"name,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the TagQuery when eager-loading is set.
-	Edges TagEdges `json:"edges"`
-}
-
-// TagEdges holds the relations/edges for other nodes in the graph.
-type TagEdges struct {
-	// Articles holds the value of the articles edge.
-	Articles []*Article `json:"articles,omitempty"`
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
-}
-
-// ArticlesOrErr returns the Articles value or an error if the edge
-// was not loaded in eager-loading.
-func (e TagEdges) ArticlesOrErr() ([]*Article, error) {
-	if e.loadedTypes[0] {
-		return e.Articles, nil
-	}
-	return nil, &NotLoadedError{edge: "articles"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -53,9 +32,7 @@ func (*Tag) scanValues(columns []string) ([]interface{}, error) {
 		switch columns[i] {
 		case tag.FieldID:
 			values[i] = new(sql.NullInt64)
-		case tag.FieldName:
-			values[i] = new(sql.NullString)
-		case tag.FieldCreateTime, tag.FieldUpdateTime:
+		case tag.FieldDeleteTime, tag.FieldCreateTime, tag.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Tag", columns[i])
@@ -78,6 +55,13 @@ func (t *Tag) assignValues(columns []string, values []interface{}) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			t.ID = int(value.Int64)
+		case tag.FieldDeleteTime:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field delete_time", values[i])
+			} else if value.Valid {
+				t.DeleteTime = new(time.Time)
+				*t.DeleteTime = value.Time
+			}
 		case tag.FieldCreateTime:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field create_time", values[i])
@@ -90,20 +74,9 @@ func (t *Tag) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				t.UpdateTime = value.Time
 			}
-		case tag.FieldName:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field name", values[i])
-			} else if value.Valid {
-				t.Name = value.String
-			}
 		}
 	}
 	return nil
-}
-
-// QueryArticles queries the "articles" edge of the Tag entity.
-func (t *Tag) QueryArticles() *ArticleQuery {
-	return (&TagClient{config: t.config}).QueryArticles(t)
 }
 
 // Update returns a builder for updating this Tag.
@@ -129,12 +102,14 @@ func (t *Tag) String() string {
 	var builder strings.Builder
 	builder.WriteString("Tag(")
 	builder.WriteString(fmt.Sprintf("id=%v", t.ID))
+	if v := t.DeleteTime; v != nil {
+		builder.WriteString(", delete_time=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", create_time=")
 	builder.WriteString(t.CreateTime.Format(time.ANSIC))
 	builder.WriteString(", update_time=")
 	builder.WriteString(t.UpdateTime.Format(time.ANSIC))
-	builder.WriteString(", name=")
-	builder.WriteString(t.Name)
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"iris-blog-server/ent/article"
 	"iris-blog-server/ent/tag"
 	"time"
 
@@ -19,6 +18,20 @@ type TagCreate struct {
 	config
 	mutation *TagMutation
 	hooks    []Hook
+}
+
+// SetDeleteTime sets the "delete_time" field.
+func (tc *TagCreate) SetDeleteTime(t time.Time) *TagCreate {
+	tc.mutation.SetDeleteTime(t)
+	return tc
+}
+
+// SetNillableDeleteTime sets the "delete_time" field if the given value is not nil.
+func (tc *TagCreate) SetNillableDeleteTime(t *time.Time) *TagCreate {
+	if t != nil {
+		tc.SetDeleteTime(*t)
+	}
+	return tc
 }
 
 // SetCreateTime sets the "create_time" field.
@@ -47,35 +60,6 @@ func (tc *TagCreate) SetNillableUpdateTime(t *time.Time) *TagCreate {
 		tc.SetUpdateTime(*t)
 	}
 	return tc
-}
-
-// SetName sets the "name" field.
-func (tc *TagCreate) SetName(s string) *TagCreate {
-	tc.mutation.SetName(s)
-	return tc
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (tc *TagCreate) SetNillableName(s *string) *TagCreate {
-	if s != nil {
-		tc.SetName(*s)
-	}
-	return tc
-}
-
-// AddArticleIDs adds the "articles" edge to the Article entity by IDs.
-func (tc *TagCreate) AddArticleIDs(ids ...int) *TagCreate {
-	tc.mutation.AddArticleIDs(ids...)
-	return tc
-}
-
-// AddArticles adds the "articles" edges to the Article entity.
-func (tc *TagCreate) AddArticles(a ...*Article) *TagCreate {
-	ids := make([]int, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
-	}
-	return tc.AddArticleIDs(ids...)
 }
 
 // Mutation returns the TagMutation object of the builder.
@@ -149,6 +133,10 @@ func (tc *TagCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (tc *TagCreate) defaults() {
+	if _, ok := tc.mutation.DeleteTime(); !ok {
+		v := tag.DefaultDeleteTime()
+		tc.mutation.SetDeleteTime(v)
+	}
 	if _, ok := tc.mutation.CreateTime(); !ok {
 		v := tag.DefaultCreateTime()
 		tc.mutation.SetCreateTime(v)
@@ -156,10 +144,6 @@ func (tc *TagCreate) defaults() {
 	if _, ok := tc.mutation.UpdateTime(); !ok {
 		v := tag.DefaultUpdateTime()
 		tc.mutation.SetUpdateTime(v)
-	}
-	if _, ok := tc.mutation.Name(); !ok {
-		v := tag.DefaultName
-		tc.mutation.SetName(v)
 	}
 }
 
@@ -170,14 +154,6 @@ func (tc *TagCreate) check() error {
 	}
 	if _, ok := tc.mutation.UpdateTime(); !ok {
 		return &ValidationError{Name: "update_time", err: errors.New(`ent: missing required field "update_time"`)}
-	}
-	if _, ok := tc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "name"`)}
-	}
-	if v, ok := tc.mutation.Name(); ok {
-		if err := tag.NameValidator(v); err != nil {
-			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "name": %w`, err)}
-		}
 	}
 	return nil
 }
@@ -206,6 +182,14 @@ func (tc *TagCreate) createSpec() (*Tag, *sqlgraph.CreateSpec) {
 			},
 		}
 	)
+	if value, ok := tc.mutation.DeleteTime(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: tag.FieldDeleteTime,
+		})
+		_node.DeleteTime = &value
+	}
 	if value, ok := tc.mutation.CreateTime(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
@@ -221,33 +205,6 @@ func (tc *TagCreate) createSpec() (*Tag, *sqlgraph.CreateSpec) {
 			Column: tag.FieldUpdateTime,
 		})
 		_node.UpdateTime = value
-	}
-	if value, ok := tc.mutation.Name(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: tag.FieldName,
-		})
-		_node.Name = value
-	}
-	if nodes := tc.mutation.ArticlesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   tag.ArticlesTable,
-			Columns: tag.ArticlesPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: article.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

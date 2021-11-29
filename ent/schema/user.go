@@ -4,7 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
-	"entgo.io/ent/schema/mixin"
+	"iris-blog-server/util"
 )
 
 // User holds the schema definition for the User entity.
@@ -29,5 +29,5 @@ func (User) Edges() []ent.Edge {
 }
 
 func (User) Mixin() []ent.Mixin {
-	return []ent.Mixin{mixin.Time{}}
+	return []ent.Mixin{util.Time{}}
 }

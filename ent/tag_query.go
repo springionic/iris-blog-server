@@ -4,10 +4,8 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"errors"
 	"fmt"
-	"iris-blog-server/ent/article"
 	"iris-blog-server/ent/predicate"
 	"iris-blog-server/ent/tag"
 	"math"
@@ -26,8 +24,6 @@ type TagQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Tag
-	// eager-loading edges.
-	withArticles *ArticleQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -62,28 +58,6 @@ func (tq *TagQuery) Unique(unique bool) *TagQuery {
 func (tq *TagQuery) Order(o ...OrderFunc) *TagQuery {
 	tq.order = append(tq.order, o...)
 	return tq
-}
-
-// QueryArticles chains the current query on the "articles" edge.
-func (tq *TagQuery) QueryArticles() *ArticleQuery {
-	query := &ArticleQuery{config: tq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := tq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := tq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(tag.Table, tag.FieldID, selector),
-			sqlgraph.To(article.Table, article.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, tag.ArticlesTable, tag.ArticlesPrimaryKey...),
-		)
-		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
 }
 
 // First returns the first Tag entity from the query.
@@ -262,27 +236,15 @@ func (tq *TagQuery) Clone() *TagQuery {
 		return nil
 	}
 	return &TagQuery{
-		config:       tq.config,
-		limit:        tq.limit,
-		offset:       tq.offset,
-		order:        append([]OrderFunc{}, tq.order...),
-		predicates:   append([]predicate.Tag{}, tq.predicates...),
-		withArticles: tq.withArticles.Clone(),
+		config:     tq.config,
+		limit:      tq.limit,
+		offset:     tq.offset,
+		order:      append([]OrderFunc{}, tq.order...),
+		predicates: append([]predicate.Tag{}, tq.predicates...),
 		// clone intermediate query.
 		sql:  tq.sql.Clone(),
 		path: tq.path,
 	}
-}
-
-// WithArticles tells the query-builder to eager-load the nodes that are connected to
-// the "articles" edge. The optional arguments are used to configure the query builder of the edge.
-func (tq *TagQuery) WithArticles(opts ...func(*ArticleQuery)) *TagQuery {
-	query := &ArticleQuery{config: tq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	tq.withArticles = query
-	return tq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -291,12 +253,12 @@ func (tq *TagQuery) WithArticles(opts ...func(*ArticleQuery)) *TagQuery {
 // Example:
 //
 //	var v []struct {
-//		CreateTime time.Time `json:"create_time,omitempty"`
+//		DeleteTime time.Time `json:"-"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Tag.Query().
-//		GroupBy(tag.FieldCreateTime).
+//		GroupBy(tag.FieldDeleteTime).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 //
@@ -318,11 +280,11 @@ func (tq *TagQuery) GroupBy(field string, fields ...string) *TagGroupBy {
 // Example:
 //
 //	var v []struct {
-//		CreateTime time.Time `json:"create_time,omitempty"`
+//		DeleteTime time.Time `json:"-"`
 //	}
 //
 //	client.Tag.Query().
-//		Select(tag.FieldCreateTime).
+//		Select(tag.FieldDeleteTime).
 //		Scan(ctx, &v)
 //
 func (tq *TagQuery) Select(fields ...string) *TagSelect {
@@ -348,11 +310,8 @@ func (tq *TagQuery) prepareQuery(ctx context.Context) error {
 
 func (tq *TagQuery) sqlAll(ctx context.Context) ([]*Tag, error) {
 	var (
-		nodes       = []*Tag{}
-		_spec       = tq.querySpec()
-		loadedTypes = [1]bool{
-			tq.withArticles != nil,
-		}
+		nodes = []*Tag{}
+		_spec = tq.querySpec()
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
 		node := &Tag{config: tq.config}
@@ -364,7 +323,6 @@ func (tq *TagQuery) sqlAll(ctx context.Context) ([]*Tag, error) {
 			return fmt.Errorf("ent: Assign called without calling ScanValues")
 		}
 		node := nodes[len(nodes)-1]
-		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	if err := sqlgraph.QueryNodes(ctx, tq.driver, _spec); err != nil {
@@ -373,72 +331,6 @@ func (tq *TagQuery) sqlAll(ctx context.Context) ([]*Tag, error) {
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-
-	if query := tq.withArticles; query != nil {
-		fks := make([]driver.Value, 0, len(nodes))
-		ids := make(map[int]*Tag, len(nodes))
-		for _, node := range nodes {
-			ids[node.ID] = node
-			fks = append(fks, node.ID)
-			node.Edges.Articles = []*Article{}
-		}
-		var (
-			edgeids []int
-			edges   = make(map[int][]*Tag)
-		)
-		_spec := &sqlgraph.EdgeQuerySpec{
-			Edge: &sqlgraph.EdgeSpec{
-				Inverse: true,
-				Table:   tag.ArticlesTable,
-				Columns: tag.ArticlesPrimaryKey,
-			},
-			Predicate: func(s *sql.Selector) {
-				s.Where(sql.InValues(tag.ArticlesPrimaryKey[1], fks...))
-			},
-			ScanValues: func() [2]interface{} {
-				return [2]interface{}{new(sql.NullInt64), new(sql.NullInt64)}
-			},
-			Assign: func(out, in interface{}) error {
-				eout, ok := out.(*sql.NullInt64)
-				if !ok || eout == nil {
-					return fmt.Errorf("unexpected id value for edge-out")
-				}
-				ein, ok := in.(*sql.NullInt64)
-				if !ok || ein == nil {
-					return fmt.Errorf("unexpected id value for edge-in")
-				}
-				outValue := int(eout.Int64)
-				inValue := int(ein.Int64)
-				node, ok := ids[outValue]
-				if !ok {
-					return fmt.Errorf("unexpected node id in edges: %v", outValue)
-				}
-				if _, ok := edges[inValue]; !ok {
-					edgeids = append(edgeids, inValue)
-				}
-				edges[inValue] = append(edges[inValue], node)
-				return nil
-			},
-		}
-		if err := sqlgraph.QueryEdges(ctx, tq.driver, _spec); err != nil {
-			return nil, fmt.Errorf(`query edges "articles": %w`, err)
-		}
-		query.Where(article.IDIn(edgeids...))
-		neighbors, err := query.All(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, n := range neighbors {
-			nodes, ok := edges[n.ID]
-			if !ok {
-				return nil, fmt.Errorf(`unexpected "articles" node returned %v`, n.ID)
-			}
-			for i := range nodes {
-				nodes[i].Edges.Articles = append(nodes[i].Edges.Articles, n)
-			}
-		}
-	}
-
 	return nodes, nil
 }
 

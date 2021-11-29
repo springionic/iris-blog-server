@@ -2,9 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
-	"entgo.io/ent/schema/edge"
-	"entgo.io/ent/schema/field"
-	"entgo.io/ent/schema/mixin"
+	"iris-blog-server/util"
 )
 
 // Tag holds the schema definition for the Tag entity.
@@ -14,18 +12,14 @@ type Tag struct {
 
 // Fields of the Tag.
 func (Tag) Fields() []ent.Field {
-	return []ent.Field{
-		field.String("name").MinLen(1).MaxLen(255).Default("").Comment("标签名称"),
-	}
+	return nil
 }
 
 // Edges of the Tag.
 func (Tag) Edges() []ent.Edge {
-	return []ent.Edge{
-		edge.From("articles", Article.Type).Ref("tags").Comment("当前标签下的所有文章"),
-	}
+	return nil
 }
 
 func (Tag) Mixin() []ent.Mixin {
-	return []ent.Mixin{mixin.Time{}}
+	return []ent.Mixin{util.Time{}}
 }

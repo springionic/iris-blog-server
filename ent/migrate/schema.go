@@ -11,11 +11,10 @@ var (
 	// ArticlesColumns holds the columns for the "articles" table.
 	ArticlesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "delete_time", Type: field.TypeTime, Nullable: true},
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
-		{Name: "title", Type: field.TypeString, Size: 255, Default: ""},
-		{Name: "content", Type: field.TypeString, Size: 2147483647, Default: ""},
-		{Name: "user_id", Type: field.TypeInt, Nullable: true},
+		{Name: "user_articles", Type: field.TypeInt, Nullable: true},
 	}
 	// ArticlesTable holds the schema information for the "articles" table.
 	ArticlesTable = &schema.Table{
@@ -25,25 +24,18 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "articles_users_articles",
-				Columns:    []*schema.Column{ArticlesColumns[5]},
+				Columns:    []*schema.Column{ArticlesColumns[4]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "article_user_id",
-				Unique:  false,
-				Columns: []*schema.Column{ArticlesColumns[5]},
 			},
 		},
 	}
 	// TagsColumns holds the columns for the "tags" table.
 	TagsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "delete_time", Type: field.TypeTime, Nullable: true},
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
-		{Name: "name", Type: field.TypeString, Size: 255, Default: ""},
 	}
 	// TagsTable holds the schema information for the "tags" table.
 	TagsTable = &schema.Table{
@@ -54,6 +46,7 @@ var (
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "delete_time", Type: field.TypeTime, Nullable: true},
 		{Name: "create_time", Type: field.TypeTime},
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "nick_name", Type: field.TypeString, Size: 255, Default: ""},
@@ -66,42 +59,14 @@ var (
 		Columns:    UsersColumns,
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
 	}
-	// ArticleTagsColumns holds the columns for the "article_tags" table.
-	ArticleTagsColumns = []*schema.Column{
-		{Name: "article_id", Type: field.TypeInt},
-		{Name: "tag_id", Type: field.TypeInt},
-	}
-	// ArticleTagsTable holds the schema information for the "article_tags" table.
-	ArticleTagsTable = &schema.Table{
-		Name:       "article_tags",
-		Columns:    ArticleTagsColumns,
-		PrimaryKey: []*schema.Column{ArticleTagsColumns[0], ArticleTagsColumns[1]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "article_tags_article_id",
-				Columns:    []*schema.Column{ArticleTagsColumns[0]},
-				RefColumns: []*schema.Column{ArticlesColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "article_tags_tag_id",
-				Columns:    []*schema.Column{ArticleTagsColumns[1]},
-				RefColumns: []*schema.Column{TagsColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ArticlesTable,
 		TagsTable,
 		UsersTable,
-		ArticleTagsTable,
 	}
 )
 
 func init() {
 	ArticlesTable.ForeignKeys[0].RefTable = UsersTable
-	ArticleTagsTable.ForeignKeys[0].RefTable = ArticlesTable
-	ArticleTagsTable.ForeignKeys[1].RefTable = TagsTable
 }

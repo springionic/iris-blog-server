@@ -4,12 +4,10 @@ package ent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"iris-blog-server/ent/article"
 	"iris-blog-server/ent/predicate"
-	"iris-blog-server/ent/tag"
-	"iris-blog-server/ent/user"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -29,90 +27,29 @@ func (au *ArticleUpdate) Where(ps ...predicate.Article) *ArticleUpdate {
 	return au
 }
 
-// SetTitle sets the "title" field.
-func (au *ArticleUpdate) SetTitle(s string) *ArticleUpdate {
-	au.mutation.SetTitle(s)
+// SetDeleteTime sets the "delete_time" field.
+func (au *ArticleUpdate) SetDeleteTime(t time.Time) *ArticleUpdate {
+	au.mutation.SetDeleteTime(t)
 	return au
 }
 
-// SetNillableTitle sets the "title" field if the given value is not nil.
-func (au *ArticleUpdate) SetNillableTitle(s *string) *ArticleUpdate {
-	if s != nil {
-		au.SetTitle(*s)
+// SetNillableDeleteTime sets the "delete_time" field if the given value is not nil.
+func (au *ArticleUpdate) SetNillableDeleteTime(t *time.Time) *ArticleUpdate {
+	if t != nil {
+		au.SetDeleteTime(*t)
 	}
 	return au
 }
 
-// SetContent sets the "content" field.
-func (au *ArticleUpdate) SetContent(s string) *ArticleUpdate {
-	au.mutation.SetContent(s)
+// ClearDeleteTime clears the value of the "delete_time" field.
+func (au *ArticleUpdate) ClearDeleteTime() *ArticleUpdate {
+	au.mutation.ClearDeleteTime()
 	return au
-}
-
-// SetNillableContent sets the "content" field if the given value is not nil.
-func (au *ArticleUpdate) SetNillableContent(s *string) *ArticleUpdate {
-	if s != nil {
-		au.SetContent(*s)
-	}
-	return au
-}
-
-// SetUserID sets the "user_id" field.
-func (au *ArticleUpdate) SetUserID(i int) *ArticleUpdate {
-	au.mutation.SetUserID(i)
-	return au
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (au *ArticleUpdate) SetUser(u *User) *ArticleUpdate {
-	return au.SetUserID(u.ID)
-}
-
-// AddTagIDs adds the "tags" edge to the Tag entity by IDs.
-func (au *ArticleUpdate) AddTagIDs(ids ...int) *ArticleUpdate {
-	au.mutation.AddTagIDs(ids...)
-	return au
-}
-
-// AddTags adds the "tags" edges to the Tag entity.
-func (au *ArticleUpdate) AddTags(t ...*Tag) *ArticleUpdate {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
-	}
-	return au.AddTagIDs(ids...)
 }
 
 // Mutation returns the ArticleMutation object of the builder.
 func (au *ArticleUpdate) Mutation() *ArticleMutation {
 	return au.mutation
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (au *ArticleUpdate) ClearUser() *ArticleUpdate {
-	au.mutation.ClearUser()
-	return au
-}
-
-// ClearTags clears all "tags" edges to the Tag entity.
-func (au *ArticleUpdate) ClearTags() *ArticleUpdate {
-	au.mutation.ClearTags()
-	return au
-}
-
-// RemoveTagIDs removes the "tags" edge to Tag entities by IDs.
-func (au *ArticleUpdate) RemoveTagIDs(ids ...int) *ArticleUpdate {
-	au.mutation.RemoveTagIDs(ids...)
-	return au
-}
-
-// RemoveTags removes "tags" edges to Tag entities.
-func (au *ArticleUpdate) RemoveTags(t ...*Tag) *ArticleUpdate {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
-	}
-	return au.RemoveTagIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -123,18 +60,12 @@ func (au *ArticleUpdate) Save(ctx context.Context) (int, error) {
 	)
 	au.defaults()
 	if len(au.hooks) == 0 {
-		if err = au.check(); err != nil {
-			return 0, err
-		}
 		affected, err = au.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*ArticleMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = au.check(); err != nil {
-				return 0, err
 			}
 			au.mutation = mutation
 			affected, err = au.sqlSave(ctx)
@@ -184,19 +115,6 @@ func (au *ArticleUpdate) defaults() {
 	}
 }
 
-// check runs all checks and user-defined validators on the builder.
-func (au *ArticleUpdate) check() error {
-	if v, ok := au.mutation.Title(); ok {
-		if err := article.TitleValidator(v); err != nil {
-			return &ValidationError{Name: "title", err: fmt.Errorf("ent: validator failed for field \"title\": %w", err)}
-		}
-	}
-	if _, ok := au.mutation.UserID(); au.mutation.UserCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"user\"")
-	}
-	return nil
-}
-
 func (au *ArticleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
@@ -215,115 +133,25 @@ func (au *ArticleUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if value, ok := au.mutation.DeleteTime(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: article.FieldDeleteTime,
+		})
+	}
+	if au.mutation.DeleteTimeCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Column: article.FieldDeleteTime,
+		})
+	}
 	if value, ok := au.mutation.UpdateTime(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
 			Value:  value,
 			Column: article.FieldUpdateTime,
 		})
-	}
-	if value, ok := au.mutation.Title(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: article.FieldTitle,
-		})
-	}
-	if value, ok := au.mutation.Content(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: article.FieldContent,
-		})
-	}
-	if au.mutation.UserCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   article.UserTable,
-			Columns: []string{article.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := au.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   article.UserTable,
-			Columns: []string{article.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if au.mutation.TagsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.TagsTable,
-			Columns: article.TagsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := au.mutation.RemovedTagsIDs(); len(nodes) > 0 && !au.mutation.TagsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.TagsTable,
-			Columns: article.TagsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := au.mutation.TagsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.TagsTable,
-			Columns: article.TagsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, au.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -344,90 +172,29 @@ type ArticleUpdateOne struct {
 	mutation *ArticleMutation
 }
 
-// SetTitle sets the "title" field.
-func (auo *ArticleUpdateOne) SetTitle(s string) *ArticleUpdateOne {
-	auo.mutation.SetTitle(s)
+// SetDeleteTime sets the "delete_time" field.
+func (auo *ArticleUpdateOne) SetDeleteTime(t time.Time) *ArticleUpdateOne {
+	auo.mutation.SetDeleteTime(t)
 	return auo
 }
 
-// SetNillableTitle sets the "title" field if the given value is not nil.
-func (auo *ArticleUpdateOne) SetNillableTitle(s *string) *ArticleUpdateOne {
-	if s != nil {
-		auo.SetTitle(*s)
+// SetNillableDeleteTime sets the "delete_time" field if the given value is not nil.
+func (auo *ArticleUpdateOne) SetNillableDeleteTime(t *time.Time) *ArticleUpdateOne {
+	if t != nil {
+		auo.SetDeleteTime(*t)
 	}
 	return auo
 }
 
-// SetContent sets the "content" field.
-func (auo *ArticleUpdateOne) SetContent(s string) *ArticleUpdateOne {
-	auo.mutation.SetContent(s)
+// ClearDeleteTime clears the value of the "delete_time" field.
+func (auo *ArticleUpdateOne) ClearDeleteTime() *ArticleUpdateOne {
+	auo.mutation.ClearDeleteTime()
 	return auo
-}
-
-// SetNillableContent sets the "content" field if the given value is not nil.
-func (auo *ArticleUpdateOne) SetNillableContent(s *string) *ArticleUpdateOne {
-	if s != nil {
-		auo.SetContent(*s)
-	}
-	return auo
-}
-
-// SetUserID sets the "user_id" field.
-func (auo *ArticleUpdateOne) SetUserID(i int) *ArticleUpdateOne {
-	auo.mutation.SetUserID(i)
-	return auo
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (auo *ArticleUpdateOne) SetUser(u *User) *ArticleUpdateOne {
-	return auo.SetUserID(u.ID)
-}
-
-// AddTagIDs adds the "tags" edge to the Tag entity by IDs.
-func (auo *ArticleUpdateOne) AddTagIDs(ids ...int) *ArticleUpdateOne {
-	auo.mutation.AddTagIDs(ids...)
-	return auo
-}
-
-// AddTags adds the "tags" edges to the Tag entity.
-func (auo *ArticleUpdateOne) AddTags(t ...*Tag) *ArticleUpdateOne {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
-	}
-	return auo.AddTagIDs(ids...)
 }
 
 // Mutation returns the ArticleMutation object of the builder.
 func (auo *ArticleUpdateOne) Mutation() *ArticleMutation {
 	return auo.mutation
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (auo *ArticleUpdateOne) ClearUser() *ArticleUpdateOne {
-	auo.mutation.ClearUser()
-	return auo
-}
-
-// ClearTags clears all "tags" edges to the Tag entity.
-func (auo *ArticleUpdateOne) ClearTags() *ArticleUpdateOne {
-	auo.mutation.ClearTags()
-	return auo
-}
-
-// RemoveTagIDs removes the "tags" edge to Tag entities by IDs.
-func (auo *ArticleUpdateOne) RemoveTagIDs(ids ...int) *ArticleUpdateOne {
-	auo.mutation.RemoveTagIDs(ids...)
-	return auo
-}
-
-// RemoveTags removes "tags" edges to Tag entities.
-func (auo *ArticleUpdateOne) RemoveTags(t ...*Tag) *ArticleUpdateOne {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
-	}
-	return auo.RemoveTagIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -445,18 +212,12 @@ func (auo *ArticleUpdateOne) Save(ctx context.Context) (*Article, error) {
 	)
 	auo.defaults()
 	if len(auo.hooks) == 0 {
-		if err = auo.check(); err != nil {
-			return nil, err
-		}
 		node, err = auo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*ArticleMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = auo.check(); err != nil {
-				return nil, err
 			}
 			auo.mutation = mutation
 			node, err = auo.sqlSave(ctx)
@@ -506,19 +267,6 @@ func (auo *ArticleUpdateOne) defaults() {
 	}
 }
 
-// check runs all checks and user-defined validators on the builder.
-func (auo *ArticleUpdateOne) check() error {
-	if v, ok := auo.mutation.Title(); ok {
-		if err := article.TitleValidator(v); err != nil {
-			return &ValidationError{Name: "title", err: fmt.Errorf("ent: validator failed for field \"title\": %w", err)}
-		}
-	}
-	if _, ok := auo.mutation.UserID(); auo.mutation.UserCleared() && !ok {
-		return errors.New("ent: clearing a required unique edge \"user\"")
-	}
-	return nil
-}
-
 func (auo *ArticleUpdateOne) sqlSave(ctx context.Context) (_node *Article, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
@@ -554,115 +302,25 @@ func (auo *ArticleUpdateOne) sqlSave(ctx context.Context) (_node *Article, err e
 			}
 		}
 	}
+	if value, ok := auo.mutation.DeleteTime(); ok {
+		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Value:  value,
+			Column: article.FieldDeleteTime,
+		})
+	}
+	if auo.mutation.DeleteTimeCleared() {
+		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
+			Type:   field.TypeTime,
+			Column: article.FieldDeleteTime,
+		})
+	}
 	if value, ok := auo.mutation.UpdateTime(); ok {
 		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
 			Type:   field.TypeTime,
 			Value:  value,
 			Column: article.FieldUpdateTime,
 		})
-	}
-	if value, ok := auo.mutation.Title(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: article.FieldTitle,
-		})
-	}
-	if value, ok := auo.mutation.Content(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: article.FieldContent,
-		})
-	}
-	if auo.mutation.UserCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   article.UserTable,
-			Columns: []string{article.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := auo.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   article.UserTable,
-			Columns: []string{article.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: user.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if auo.mutation.TagsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.TagsTable,
-			Columns: article.TagsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := auo.mutation.RemovedTagsIDs(); len(nodes) > 0 && !auo.mutation.TagsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.TagsTable,
-			Columns: article.TagsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := auo.mutation.TagsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   article.TagsTable,
-			Columns: article.TagsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: tag.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Article{config: auo.config}
 	_spec.Assign = _node.assignValues
